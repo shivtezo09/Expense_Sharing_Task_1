@@ -11,20 +11,13 @@ class ExpenseManager:
                 print(f"{name} is already added!")
                 continue
             self.members.append(name)
-            self.balances[name] = {}
+            self.balances[name] = {member: 0 for member in self.members}  
             for member in self.members:
                 if member not in self.balances:
                     self.balances[member] = {}
-                if member != name:
-                    self.balances[name][member] = 0
-                    self.balances[member][name] = 0
+                self.balances[member][name] = 0  
     
     def add_expense(self):
-        print("\nHow would you like to add the expense?")
-        print("1. All users share the expense")
-        print("2. Only some users share the expense")
-        sharing_option = input("Choose an option (1/2): ").strip()
-
         payer = input("Who paid the expense? ").strip()
         if payer not in self.members:
             print("This person is not in the member list!")
@@ -36,39 +29,65 @@ class ExpenseManager:
             print("Invalid amount!")
             return
 
-        sharers = []
-        
-        if sharing_option == '1':
-            # All members share the expense
-            sharers = self.members.copy()
-        elif sharing_option == '2':
-            # Only some members share the expense
-            sharers_input = input("Who all share the expense? (separate names with commas): ").strip()
-            sharers = [name.strip() for name in sharers_input.split(',')]
-            
-            # Validate that all sharers are in the members list
-            for sharer in sharers:
-                if sharer not in self.members:
-                    print(f"{sharer} is not in the member list!")
-                    return
-            
-            # Make sure the payer is included in sharers if not already
-            if payer not in sharers:
-                print(f"Adding {payer} to the list of sharers as they paid the expense.")
-                sharers.append(payer)
-        else:
-            print("Invalid option!")
+        print("\nSharing Pattern:")
+        print("1. All users share the expense")
+        print("2. Only some users share the expense")
+        try:
+            sharing_pattern = int(input("Enter your choice (1/2): "))
+        except ValueError:
+            print("Invalid choice!")
             return
 
-        per_person = amount / len(sharers)
-        
-        # Initialize shares for all members
-        shares = {member: 0 for member in self.members}
-        
-        # Update shares for only those who are sharing
-        for sharer in sharers:
-            shares[sharer] = per_person
-        
+        sharers = []
+        if sharing_pattern == 1:
+            sharers = self.members.copy()
+        elif sharing_pattern == 2:
+            sharers_input = input("Who all share the expense? (comma-separated names): ")
+            sharers = [name.strip() for name in sharers_input.split(',')]
+            for name in sharers:
+                if name not in self.members:
+                    print(f"{name} is not in the member list!")
+                    return
+        else:
+            print("Invalid choice!")
+            return
+
+        print("\nExpense Distribution:")
+        print("1. Everyone shares the expense equally")
+        print("2. Expense is shared in a ratio")
+        try:
+            distribution = int(input("Enter your choice (1/2): "))
+        except ValueError:
+            print("Invalid choice!")
+            return
+
+        shares = {}
+        if distribution == 1:
+            per_person = amount / len(sharers)
+            for member in sharers:
+                shares[member] = per_person
+        elif distribution == 2:
+            ratios_input = input(f"Enter the ratios for {', '.join(sharers)} (comma-separated): ")
+            try:
+                ratios = [float(r.strip()) for r in ratios_input.split(',')]
+            except ValueError:
+                print("Invalid ratio input!")
+                return
+            if len(ratios) != len(sharers):
+                print("Number of ratios doesn't match number of sharers!")
+                return
+
+            total_ratio = sum(ratios)
+            if total_ratio == 0:
+                print("Invalid ratios! Total ratio cannot be zero.")
+                return
+
+            for i, member in enumerate(sharers):
+                shares[member] = round((ratios[i] / total_ratio) * amount, 2)
+        else:
+            print("Invalid choice!")
+            return
+
         expense = {
             'payer': payer,
             'amount': amount,
@@ -77,9 +96,8 @@ class ExpenseManager:
         }
         self.expenses.append(expense)
 
-        # Update balances
-        for member in self.members:
-            if member != payer and shares[member] > 0:
+        for member in sharers:
+            if member != payer:
                 self.balances[member][payer] += shares[member]
                 self.balances[payer][member] -= shares[member]
 
@@ -100,9 +118,9 @@ class ExpenseManager:
                 if row_member == col_member:
                     row += f"{'0':^12}"
                 else:
-                    amount = self.balances.get(row_member, {}).get(col_member, 0)
+                    amount = self.balances.get(row_member, {}).get(col_member, 0) 
                     if amount > 0:
-                        row += f"{amount:^12.2f}"
+                        row += f"{amount:^12.0f}"
                     else:
                         row += f"{'0':^12}"
             print(row)
