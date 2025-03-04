@@ -20,6 +20,11 @@ class ExpenseManager:
                     self.balances[member][name] = 0
     
     def add_expense(self):
+        print("\nHow would you like to add the expense?")
+        print("1. All users share the expense")
+        print("2. Only some users share the expense")
+        sharing_option = input("Choose an option (1/2): ").strip()
+
         payer = input("Who paid the expense? ").strip()
         if payer not in self.members:
             print("This person is not in the member list!")
@@ -31,18 +36,50 @@ class ExpenseManager:
             print("Invalid amount!")
             return
 
-        per_person = amount / len(self.members)
-        shares = {member: per_person for member in self.members}
+        sharers = []
+        
+        if sharing_option == '1':
+            # All members share the expense
+            sharers = self.members.copy()
+        elif sharing_option == '2':
+            # Only some members share the expense
+            sharers_input = input("Who all share the expense? (separate names with commas): ").strip()
+            sharers = [name.strip() for name in sharers_input.split(',')]
+            
+            # Validate that all sharers are in the members list
+            for sharer in sharers:
+                if sharer not in self.members:
+                    print(f"{sharer} is not in the member list!")
+                    return
+            
+            # Make sure the payer is included in sharers if not already
+            if payer not in sharers:
+                print(f"Adding {payer} to the list of sharers as they paid the expense.")
+                sharers.append(payer)
+        else:
+            print("Invalid option!")
+            return
+
+        per_person = amount / len(sharers)
+        
+        # Initialize shares for all members
+        shares = {member: 0 for member in self.members}
+        
+        # Update shares for only those who are sharing
+        for sharer in sharers:
+            shares[sharer] = per_person
         
         expense = {
             'payer': payer,
             'amount': amount,
+            'sharers': sharers,
             'shares': shares
         }
         self.expenses.append(expense)
 
+        # Update balances
         for member in self.members:
-            if member != payer:
+            if member != payer and shares[member] > 0:
                 self.balances[member][payer] += shares[member]
                 self.balances[payer][member] -= shares[member]
 
